@@ -1,2 +1,3 @@
-# meditech/auth/__init__.py
-from .routes import auth
+from flask import Blueprint
+
+auth = Blueprint("auth", __name__)
