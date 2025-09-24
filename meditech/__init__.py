@@ -1,5 +1,4 @@
 # meditech/app/__init__.py
-
 import os
 from flask import Flask
 from flask_cors import CORS
@@ -7,14 +6,32 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_session import Session
 
-# Exportamos db a nivel de módulo para que otros puedan hacer: from meditech.app import db
 db = SQLAlchemy()
 migrate = Migrate()
+
+def _register_auth_blueprint(app: Flask) -> None:
+    """
+    Intenta registrar el blueprint `auth` desde varios lugares comunes:
+    - meditech.auth (si __init__.py exporta `auth`)
+    - meditech.auth.routes (si el blueprint vive en routes.py)
+    """
+    tried = []
+    for modpath in ("meditech.auth", "meditech.auth.routes"):
+        try:
+            mod = __import__(modpath, fromlist=["auth"])
+            bp = getattr(mod, "auth", None)
+            if bp is not None:
+                app.register_blueprint(bp)
+                app.logger.info(f"✅ Blueprint 'auth' registrado desde {modpath}")
+                return
+            tried.append(f"{modpath} (sin atributo 'auth')")
+        except Exception as e:
+            tried.append(f"{modpath} ({e!r})")
+    app.logger.warning("⚠️ No se pudo registrar blueprint 'auth'. Intentos: " + " | ".join(tried))
 
 def create_app() -> Flask:
     app = Flask(__name__)
 
-    # ---- Configuración base (lee de variables de entorno de Render) ----
     app.config.update(
         SECRET_KEY=os.getenv("SECRET_KEY", "dev-secret"),
         SQLALCHEMY_DATABASE_URI=os.getenv("SQLALCHEMY_DATABASE_URI", "sqlite:///meditech.db"),
@@ -22,7 +39,6 @@ def create_app() -> Flask:
         SESSION_TYPE=os.getenv("SESSION_TYPE", "filesystem"),
     )
 
-    # ---- Inicializar extensiones ----
     db.init_app(app)
     migrate.init_app(app, db)
     Session(app)
@@ -32,40 +48,18 @@ def create_app() -> Flask:
         supports_credentials=True,
     )
 
-    # ---- Registrar blueprints ----
-    # Auth (asegúrate de que tu blueprint 'auth' esté definido y exportado)
-    try:
-        # Si tu blueprint está en meditech/auth/__init__.py
-        from meditech.auth import auth as auth_bp
-        app.register_blueprint(auth_bp)
-    except Exception:
-        try:
-            # Alternativa si lo tienes en meditech/auth/routes.py
-            from meditech.auth.routes import auth as auth_bp
-            app.register_blueprint(auth_bp)
-        except Exception as e:
-            app.logger.warning(f"No se pudo registrar el blueprint de auth: {e}")
+    # Registrar auth
+    _register_auth_blueprint(app)
 
-    # (Opcionales) Si luego agregas otros blueprints, descomenta/ajusta este patrón:
-    # for dotted in [
-    #     "meditech.appointments.routes:appointments_bp",
-    #     "meditech.doctors.routes:doctors_bp",
-    #     "meditech.medications.routes:medications_bp",
-    #     "meditech.hospitals.routes:hospitals_bp",
-    #     "meditech.insurances.routes:insurances_bp",
-    #     "meditech.subscriptions.routes:subscriptions_bp",
-    #     "meditech.examinations.routes:examinations_bp",
-    # ]:
-    #     try:
-    #         module, attr = dotted.split(":")
-    #         mod = __import__(module, fromlist=[attr])
-    #         app.register_blueprint(getattr(mod, attr))
-    #     except Exception as e:
-    #         app.logger.debug(f"Blueprint opcional {dotted} no registrado: {e}")
-
-    # ---- Rutas de utilidad ----
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    # Mostrar mapa de rutas en logs para depurar
+    with app.app_context():
+        try:
+            app.logger.info("📍 URL Map:\n" + "\n".join(sorted(str(r) for r in app.url_map.iter_rules())))
+        except Exception as e:
+            app.logger.debug(f"No se pudo listar url_map: {e!r}")
 
     return app
