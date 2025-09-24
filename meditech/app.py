@@ -1,3 +1,4 @@
+# meditech/app.py
 import os
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -6,7 +7,7 @@ from flask_session import Session
 from flask_login import LoginManager
 from flask_cors import CORS
 
-
+# Exportados a nivel de módulo (otros módulos usan: from meditech.app import db)
 db = SQLAlchemy()
 login_manager = LoginManager()
 
@@ -15,11 +16,11 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 def create_app():
     app = Flask(__name__)
 
-    # ==== Config desde ENV (ideal para Render) ====
+    # ===== Config para Render (usa variables de entorno) =====
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SQLALCHEMY_DATABASE_URI", "")
     if not app.config["SQLALCHEMY_DATABASE_URI"]:
-        # Evita que en Render intente usar localhost
-        raise RuntimeError("Falta SQLALCHEMY_DATABASE_URI en las variables de entorno.")
+        # Evita usar localhost en Render por accidente
+        raise RuntimeError("Falta SQLALCHEMY_DATABASE_URI en Environment de Render.")
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me")
     app.config["SESSION_TYPE"] = os.getenv("SESSION_TYPE", "filesystem")
@@ -27,11 +28,12 @@ def create_app():
     app.config["SESSION_USE_SIGNER"] = True
     app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-    # CORS: permite múltiples orígenes separados por coma (p. ej. FRONT_URL1,FRONT_URL2)
+    # CORS (admite lista separada por comas)
     cors_origins = os.getenv("CORS_ORIGIN", "*")
-    CORS(app, resources={r"/*": {"origins": [o.strip() for o in cors_origins.split(",")]}}, supports_credentials=True)
+    origins_list = [o.strip() for o in cors_origins.split(",")]
+    CORS(app, resources={r"/*": {"origins": origins_list}}, supports_credentials=True)
 
-    # ==== Extensiones ====
+    # ===== Extensiones =====
     db.init_app(app)
     Migrate(app, db)
     Session(app)
@@ -39,10 +41,11 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
+        # evita import circular
         from .users.models import User
         return User.query.get(user_id)
 
-    # ==== Blueprints ====
+    # ===== Blueprints =====
     # IMPORTANTE: los blueprints NO deben tener url_prefix dentro; se lo damos aquí.
     from .appointments.routes import appointments
     from .auth.routes import auth
@@ -64,12 +67,12 @@ def create_app():
     app.register_blueprint(examinations,  url_prefix="/examinations")
     app.register_blueprint(users,         url_prefix="/users")
 
-    # ==== Utilidad ====
+    # ===== Utilidad =====
     @app.get("/health")
     def health():
         return {"status": "ok"}
 
-    # Endpoint opcional para listar rutas (útil al depurar). Puedes borrarlo luego.
+    # Endpoint de depuración: lista TODAS las rutas (bórralo luego si quieres)
     @app.get("/__routes")
     def list_routes():
         rules = []
