@@ -9,7 +9,8 @@ import jwt
 
 auth = Blueprint('auth', __name__, url_prefix='/auth')
 
-SECRET_KEY = 'roadtochina2025'
+import os
+SECRET_KEY = os.getenv("SECRET_KEY", "dev")
 
 @auth.route('/register', methods=['POST'])
 def register():
