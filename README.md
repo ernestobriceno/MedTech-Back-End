@@ -32,7 +32,7 @@ Before starting, ensure you have the following installed:
 ## Cloning the Repository
 Clone the MediTech API repository from GitHub:
 ```bash
-git clone https://github.com/ernestobriceno/MedTech-Back-End
+git clone https://github.com/xMakuno/meditech-api.git
 cd meditech-api
 ```
 

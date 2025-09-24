@@ -1,4 +1,3 @@
-from . import auth  
 from flask import Blueprint, request, jsonify, session
 from flask_login import login_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,9 +6,10 @@ from meditech.doctors.models import Doctor
 from meditech.app import db
 from datetime import datetime, timedelta
 import jwt
-import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev")
+auth = Blueprint('auth', __name__, url_prefix='/auth')
+
+SECRET_KEY = 'roadtochina2025'
 
 @auth.route('/register', methods=['POST'])
 def register():
