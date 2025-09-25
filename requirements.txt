@@ -1,10 +1,20 @@
 Flask==2.3.3
 Flask-Cors==5.0.0
 Flask-Login==0.6.3
-Flask-Migrate==4.0.7
 Flask-SQLAlchemy==3.1.1
-SQLAlchemy==2.0.25
+SQLAlchemy==2.0.36
 alembic==1.13.3
+Flask-Migrate==4.0.7
+
 psycopg[binary]==3.2.10
 python-dotenv==1.0.1
 gunicorn==21.2.0
+
+# Dependencias base de Flask 2.3
+Werkzeug==3.1.3
+Jinja2==3.1.6
+itsdangerous==2.2.0
+click==8.1.7
+typing_extensions>=4.12
+blinker>=1.6
+greenlet>=3.0
